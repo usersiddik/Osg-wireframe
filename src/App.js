@@ -1,452 +1,678 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
-  BarChart3, 
   ShieldCheck, 
   Microscope, 
   Activity, 
   Stethoscope,
   Target,
   Rocket,
-  Map,
+  Map as MapIcon,
   BrainCircuit,
   ArrowRight,
-  Image as ImageIcon,
   CheckCircle2,
-  Database,
+  BarChart3,
   Lightbulb,
   TrendingUp,
-  Globe,
-  Clock,
-  ArrowUpRight
+  Database,
+  Menu,
+  X,
+  Search
 } from 'lucide-react';
 
+// --- FONTS & CSS INJECTION ---
+const FontStyles = () => (
+  <style dangerouslySetInnerHTML={{__html: `
+    @import url('https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600&family=Poppins:wght@600;700;800&display=swap');
+    
+    .font-poppins { font-family: 'Poppins', sans-serif; }
+    .font-barlow { font-family: 'Barlow', sans-serif; }
+  `}} />
+);
+
+// --- SCROLL ANIMATION HOOK ---
+const useIntersectionObserver = (options = { threshold: 0.1, triggerOnce: true }) => {
+  const [isIntersecting, setIsIntersecting] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setIsIntersecting(true);
+        if (options.triggerOnce) observer.disconnect();
+      } else if (!options.triggerOnce) {
+        setIsIntersecting(false);
+      }
+    }, options);
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [options.triggerOnce, options.threshold]);
+
+  return [ref, isIntersecting];
+};
+
+const FadeInUp = ({ children, delay = '0ms', className = '' }) => {
+  const [ref, isVisible] = useIntersectionObserver();
+  return (
+    <div 
+      ref={ref}
+      className={`transition-all duration-1000 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'} ${className}`}
+      style={{ transitionDelay: delay }}
+    >
+      {children}
+    </div>
+  );
+};
+
+// --- CUSTOM GRADIENT BUTTON COMPONENT ---
+const GradientButton = ({ href, children, darkBg = false, onClick, className = '' }) => {
+  const innerBgClass = darkBg ? 'bg-[#340a54]' : 'bg-white';
+  const textColorClass = darkBg ? 'text-white' : 'text-[#1a1a1a] group-hover:text-white';
+  const Component = href ? 'a' : 'button';
+  
+  return (
+    <Component 
+      href={href} 
+      onClick={onClick}
+      className={`group relative inline-flex p-[1.5px] rounded-[4px] bg-gradient-to-r from-[#02ce6b] to-[#058ae5] shadow-sm hover:shadow-lg hover:shadow-[#058ae5]/20 transition-all duration-300 ease-out ${className}`}
+    >
+      <span className={`flex items-center justify-center gap-2 px-8 py-3.5 w-full h-full rounded-[3px] transition-all duration-300 ease-out font-poppins font-bold text-[16px] md:text-[18px] ${innerBgClass} ${textColorClass} group-hover:bg-transparent group-hover:text-white`}>
+        {children}
+      </span>
+    </Component>
+  );
+};
+
 export default function App() {
-  const [activeFilter, setActiveFilter] = useState('All');
+  const [activeFilter, setActiveFilter] = useState('All Insights');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [scrolled, setScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [currentHeroSlide, setCurrentHeroSlide] = useState(0);
+
+  // Nav scroll listener
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 50);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Hero Slider Data
+  const heroBullets = [
+    { text: "Customer, market, and behavioral analytics tied directly to business decisions", img: "https://images.unsplash.com/photo-1579154204601-01588f351e67?auto=format&fit=crop&w=1200&q=80" },
+    { text: "Deep experience across pharma, medtech, and healthcare organizations", img: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=1200&q=80" },
+    { text: "Secure workflows for sensitive commercial and healthcare data", img: "https://images.unsplash.com/photo-1563986768494-4dee2763ff0f?auto=format&fit=crop&w=1200&q=80" },
+    { text: "Dashboards, models, and insights built for leadership teams", img: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80" }
+  ];
+
+  // Auto-play for Hero Slider
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentHeroSlide((prev) => (prev + 1) % heroBullets.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [heroBullets.length]);
 
   return (
-    // .page-wrapper
-    <div className="bg-white text-slate-900 font-sans selection:bg-slate-200 w-full min-h-screen">
+    <div className="bg-white text-[#1a1a1a] font-barlow selection:bg-[#058ae5] selection:text-white w-full min-h-screen overflow-clip">
+      <FontStyles />
       
       {/* NAVBAR */}
-      <nav className="sticky top-0 z-50 w-full h-20 border-b border-slate-200 bg-white/90 backdrop-blur-md">
+      <nav className={`fixed top-0 z-50 w-full h-20 border-b transition-all duration-300 ${scrolled ? 'bg-white/90 backdrop-blur-md border-[#e5e5e8] shadow-sm' : 'bg-white border-transparent'}`}>
         <div className="px-5 md:px-10 lg:px-20 w-full h-full flex items-center">
-          <div className="max-w-7xl mx-auto w-full flex justify-between items-center">
-            <div className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-              <Activity className="text-slate-900 w-6 h-6" /> OSG <span className="text-xs font-normal text-slate-500 ml-2 border border-slate-300 px-2 py-0.5 rounded-full">WIREFRAME</span>
+          <div className="max-w-[1200px] mx-auto w-full flex justify-between items-center">
+            
+            <a href="/" className="flex items-center hover:opacity-80 transition-opacity shrink-0">
+              <img 
+                src="https://osganalytics.com/wp-content/uploads/2021/09/Logo.svg" 
+                alt="OSG Analytics" 
+                className="h-10 object-contain"
+                onError={(e) => {
+                  e.target.onerror = null; 
+                  e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='40' viewBox='0 0 140 40'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%23058ae5' /%3E%3Cstop offset='100%25' stop-color='%2302ce6b' /%3E%3C/linearGradient%3E%3C/defs%3E%3Ctext x='0' y='34' font-family='sans-serif' font-weight='900' font-size='42' fill='%23340a54' letter-spacing='-1'%3EOS%3C/text%3E%3Ctext x='64' y='34' font-family='sans-serif' font-weight='900' font-size='42' fill='%23340a54' letter-spacing='-1'%3EC%3C/text%3E%3Cpath d='M96 23 L118 12 L124 23 L106 35 Z' fill='url(%23grad)'/%3E%3C/svg%3E";
+                }}
+              />
+            </a>
+            
+            <div className="hidden lg:flex space-x-8 text-[16px] md:text-[18px] font-medium text-[#1a1a1a]">
+              <a href="#industries" className="hover:text-[#058ae5] transition-colors duration-300">Industries</a>
+              <a href="#services" className="hover:text-[#058ae5] transition-colors duration-300">Capabilities</a>
+              <a href="#outcomes" className="hover:text-[#058ae5] transition-colors duration-300">Case Studies</a>
+              <a href="#process" className="hover:text-[#058ae5] transition-colors duration-300">Process</a>
+              <a href="#insights" className="hover:text-[#058ae5] transition-colors duration-300">Insights</a>
+              <a href="#about" className="hover:text-[#058ae5] transition-colors duration-300">About</a>
             </div>
-            <div className="hidden md:flex space-x-8 text-sm font-semibold text-slate-500">
-              <a href="#services" className="hover:text-slate-900 transition-colors">Services</a>
-              <a href="#outcomes" className="hover:text-slate-900 transition-colors">Outcomes</a>
-              <a href="#process" className="hover:text-slate-900 transition-colors">Process</a>
-              <a href="#insights" className="hover:text-slate-900 transition-colors">Insights</a>
-            </div>
+            
+            <GradientButton href="#contact" className="hidden lg:inline-flex">
+              Request a Capabilities Overview
+            </GradientButton>
+
+            <button className="lg:hidden text-[#1a1a1a]" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+              {isMobileMenuOpen ? <X className="w-8 h-8" /> : <Menu className="w-8 h-8" />}
+            </button>
           </div>
         </div>
+
+        {isMobileMenuOpen && (
+          <div className="lg:hidden absolute top-20 left-0 w-full bg-white border-b border-[#e5e5e8] shadow-lg flex flex-col p-6 gap-6 z-40">
+            <a href="#industries" onClick={() => setIsMobileMenuOpen(false)} className="text-[18px] md:text-[20px] font-medium text-[#1a1a1a] hover:text-[#058ae5] transition-colors duration-300">Industries</a>
+            <a href="#services" onClick={() => setIsMobileMenuOpen(false)} className="text-[18px] md:text-[20px] font-medium text-[#1a1a1a] hover:text-[#058ae5] transition-colors duration-300">Capabilities</a>
+            <a href="#outcomes" onClick={() => setIsMobileMenuOpen(false)} className="text-[18px] md:text-[20px] font-medium text-[#1a1a1a] hover:text-[#058ae5] transition-colors duration-300">Case Studies</a>
+            <a href="#process" onClick={() => setIsMobileMenuOpen(false)} className="text-[18px] md:text-[20px] font-medium text-[#1a1a1a] hover:text-[#058ae5] transition-colors duration-300">Process</a>
+            <a href="#insights" onClick={() => setIsMobileMenuOpen(false)} className="text-[18px] md:text-[20px] font-medium text-[#1a1a1a] hover:text-[#058ae5] transition-colors duration-300">Insights</a>
+            <a href="#about" onClick={() => setIsMobileMenuOpen(false)} className="text-[18px] md:text-[20px] font-medium text-[#1a1a1a] hover:text-[#058ae5] transition-colors duration-300">About</a>
+            <GradientButton href="#contact" onClick={() => setIsMobileMenuOpen(false)} className="w-full mt-4">
+              Request a Capabilities Overview
+            </GradientButton>
+          </div>
+        )}
       </nav>
 
-      {/* .main-wrapper */}
       <main className="w-full flex flex-col">
 
-        {/* 1. HERO SECTION */}
-        <section className="relative pt-20 pb-16 md:pt-32 md:pb-24 overflow-hidden">
-          {/* Subtle background grid pattern */}
-          <div className="absolute inset-0 z-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMCwwLDAsMC4wNykiLz48L3N2Zz4=')] opacity-60" />
-          
+        {/* SECTION 1: HERO */}
+        <section className="relative pt-32 pb-16 md:pt-40 md:pb-20 overflow-hidden bg-white border-b border-[#e5e5e8]">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1200px] h-[600px] bg-gradient-to-b from-[#058ae5]/5 to-transparent pointer-events-none" />
+          <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-gradient-to-br from-[#340a54]/15 to-[#058ae5]/15 rounded-full blur-[100px] pointer-events-none" />
+          <div className="absolute top-[20%] left-[-10%] w-[400px] h-[400px] bg-gradient-to-tr from-[#02ce6b]/10 to-[#058ae5]/10 rounded-full blur-[100px] pointer-events-none" />
+
           <div className="px-5 md:px-10 lg:px-20 relative z-10 w-full">
-            <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              {/* Hero Content */}
-              <div className="flex flex-col">
-                <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.1] mb-6 text-slate-900">
-                  Data Analytics & Strategy for <br className="hidden md:block"/>
-                  Better Commercial Decisions
+            <div className="max-w-[1200px] mx-auto flex flex-col items-center text-center">
+              
+              <FadeInUp className="max-w-4xl flex flex-col items-center">
+                <h1 className="text-4xl md:text-5xl lg:text-[64px] font-poppins font-extrabold tracking-tight leading-[1.1] mb-6 text-[#1a1a1a]">
+                  Data Analytics & Strategy for <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#340a54] via-[#058ae5] to-[#02ce6b]">Better Commercial Decisions</span>
                 </h1>
-                <p className="text-lg md:text-xl text-slate-600 max-w-2xl mb-8 leading-relaxed">
+                <p className="text-[18px] md:text-[22px] text-[#1a1a1a]/80 max-w-3xl mb-10 leading-relaxed font-barlow">
                   OSG helps pharma, medtech, and healthcare leaders turn fragmented customer, market, and real-world data into clear decisions on growth, customer strategy, product positioning, and experience improvement.
                 </p>
-                
-                {/* Shortened Bullets */}
-                <ul className="flex flex-col gap-3 mb-10 max-w-lg text-slate-700 font-medium">
-                  <li className="flex items-start gap-3"><CheckCircle2 className="text-slate-400 shrink-0 w-5 h-5 mt-0.5"/><span>Analytics tied directly to business decisions</span></li>
-                  <li className="flex items-start gap-3"><CheckCircle2 className="text-slate-400 shrink-0 w-5 h-5 mt-0.5"/><span>Deep experience across complex healthcare sectors</span></li>
-                  <li className="flex items-start gap-3"><CheckCircle2 className="text-slate-400 shrink-0 w-5 h-5 mt-0.5"/><span>Secure workflows for sensitive commercial data</span></li>
-                </ul>
 
-                {/* CTAs */}
-                <div className="flex flex-wrap items-center gap-4">
-                  <button className="bg-slate-900 text-white px-8 py-4 text-sm font-bold uppercase tracking-wider hover:bg-slate-800 transition-colors flex items-center gap-2">
-                    Talk to Our Team <ArrowRight className="w-4 h-4"/>
-                  </button>
-                  <button className="border-2 border-slate-200 bg-transparent text-slate-900 px-8 py-4 text-sm font-bold uppercase tracking-wider hover:border-slate-900 transition-colors">
-                    See Capabilities
-                  </button>
+                <div className="flex flex-wrap items-center justify-center gap-4 mb-8">
+                  <GradientButton href="#services">
+                    See Our Capabilities
+                  </GradientButton>
                 </div>
-              </div>
+              </FadeInUp>
 
-              {/* Hero Visual (Abstract Graphic Placeholder) */}
-              <div className="w-full h-[500px] bg-slate-50 border border-slate-200 relative flex items-center justify-center overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-tr from-slate-100 to-white"></div>
-                <div className="relative z-10 flex flex-col items-center gap-4 text-slate-400">
-                  <BarChart3 className="w-24 h-24 opacity-20" />
-                  <span className="text-sm font-bold tracking-widest uppercase">Abstract Analytics Graphic</span>
-                </div>
-                {/* Decorative wireframe shapes */}
-                <div className="absolute bottom-10 left-10 w-32 h-32 border border-slate-200 rounded-full" />
-                <div className="absolute top-20 right-10 w-48 h-48 border border-slate-200 rounded-full" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-px bg-slate-200" />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* 2. TRUST + CREDIBILITY STRIP */}
-        <section className="bg-slate-50 border-y border-slate-200 py-6">
-          <div className="px-5 md:px-10 lg:px-20 w-full">
-            <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
-              <div className="flex gap-8 text-slate-600 font-bold items-center text-sm md:text-base">
-                <div className="flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-slate-400"/> 100+ Projects</div>
-                <div className="flex items-center gap-2"><Globe className="w-5 h-5 text-slate-400"/> Global Teams</div>
-              </div>
-              <div className="hidden md:block w-px h-6 bg-slate-300"></div>
-              <div className="flex flex-wrap justify-center gap-6 md:gap-12 text-sm font-bold text-slate-500 uppercase tracking-widest">
-                <span>Pharma</span>
-                <span>MedTech</span>
-                <span>Healthcare</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* 3. WHO WE HELP */}
-        <section className="py-20 md:py-28 bg-white">
-          <div className="px-5 md:px-10 lg:px-20 w-full">
-            <div className="max-w-7xl mx-auto">
-              <div className="mb-12 max-w-3xl">
-                <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 text-slate-900">Built for Complex, Data-Rich Industries</h2>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Clickable Cards */}
-                {[
-                  { title: 'Pharma', icon: <Microscope className="w-8 h-8 text-slate-700"/>, desc: 'Clarify treatment landscapes and align commercial teams around the right targets.' },
-                  { title: 'MedTech', icon: <Activity className="w-8 h-8 text-slate-700"/>, desc: 'Understand adoption drivers and sharpen launch plans for complex device portfolios.' },
-                  { title: 'Healthcare', icon: <Stethoscope className="w-8 h-8 text-slate-700"/>, desc: 'Combine patient and provider data to improve service mix and experience decisions.' }
-                ].map((item, i) => (
-                  <a href="#" key={i} className="group bg-slate-50 border border-slate-200 p-8 hover:border-slate-900 transition-colors h-full flex flex-col cursor-pointer block">
-                    <div className="mb-6">{item.icon}</div>
-                    <h3 className="text-2xl font-bold mb-3 text-slate-900">{item.title}</h3>
-                    <p className="text-slate-600 flex-1">{item.desc}</p>
-                    <div className="mt-6 flex items-center gap-2 text-sm font-bold text-slate-900 uppercase tracking-wider group-hover:gap-3 transition-all">
-                      Explore <ArrowRight className="w-4 h-4"/>
-                    </div>
-                  </a>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* 4. WHAT WE DO (Grouped Categories) */}
-        <section id="services" className="py-20 md:py-28 bg-slate-900 text-white">
-          <div className="px-5 md:px-10 lg:px-20 w-full">
-            <div className="max-w-7xl mx-auto">
-              <div className="mb-16 max-w-3xl">
-                <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">Analytics & Strategy Services</h2>
-                <p className="text-xl text-slate-400">We group our expertise into four core areas to connect rigorous analytics with practical strategy.</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {[
-                  { title: 'Customer Strategy', icon: <Target className="w-6 h-6"/>, desc: 'Prioritize the customers, accounts, or audiences that matter most. Identify what truly drives behavior, value, loyalty, and choice.' },
-                  { title: 'Growth & Launch', icon: <Rocket className="w-6 h-6"/>, desc: 'Support go-to-market, launch, and expansion decisions with evidence-based analytics and scenario planning.' },
-                  { title: 'Experience & Journey', icon: <Map className="w-6 h-6"/>, desc: 'Map end-to-end interactions to find the points of friction that matter most and focus resources on changes that move outcomes.' },
-                  { title: 'AI & Predictive Analytics', icon: <BrainCircuit className="w-6 h-6"/>, desc: 'Use models to forecast behavior, size opportunities, and give leaders clear, tailored views of the trade-offs behind critical decisions.' }
-                ].map((item, i) => (
-                  <div key={i} className="border border-slate-700 bg-slate-800/50 p-8 hover:bg-slate-800 transition-colors">
-                    <div className="w-12 h-12 bg-slate-700 flex items-center justify-center mb-6 text-white">
-                      {item.icon}
-                    </div>
-                    <h3 className="text-2xl font-bold mb-3">{item.title}</h3>
-                    <p className="text-slate-400 leading-relaxed">{item.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* 5. HOW IT WORKS (Visual Flow) */}
-        <section id="process" className="py-20 md:py-28 bg-white overflow-hidden">
-          <div className="px-5 md:px-10 lg:px-20 w-full">
-            <div className="max-w-7xl mx-auto">
-              <div className="mb-16 text-center max-w-3xl mx-auto">
-                <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 text-slate-900">A Clear Path to Impact</h2>
-                <p className="text-xl text-slate-600">Managing your data-insights-decision value chain efficiently.</p>
-              </div>
-              
-              {/* Horizontal Flow Container */}
-              <div className="relative mt-16 max-w-5xl mx-auto">
-                {/* Connecting Line */}
-                <div className="hidden md:block absolute top-8 left-10 right-10 h-0.5 bg-slate-200 z-0"></div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative z-10">
-                  {[
-                    { step: 'Data', icon: <Database className="w-6 h-6"/>, title: 'Gather & Structure', desc: 'Securely ingest and align complex datasets.' },
-                    { step: 'Insights', icon: <Lightbulb className="w-6 h-6"/>, title: 'Analyze & Model', desc: 'Apply rigorous methods to find the signal.' },
-                    { step: 'Decisions', icon: <Target className="w-6 h-6"/>, title: 'Strategic Output', desc: 'Translate findings into actionable roadmaps.' },
-                    { step: 'Impact', icon: <TrendingUp className="w-6 h-6"/>, title: 'Measurable Value', desc: 'Drive growth, adoption, and experience.' }
-                  ].map((item, i) => (
-                    <div key={i} className="flex flex-col items-center text-center">
-                      <div className="w-16 h-16 bg-white border-2 border-slate-900 flex items-center justify-center mb-6 relative">
-                        {item.icon}
-                        {/* Mobile connecting line */}
-                        {i !== 3 && <div className="md:hidden absolute top-full left-1/2 -translate-x-1/2 w-0.5 h-8 bg-slate-200"></div>}
+              {/* 16:9 Aspect Ratio Hero Slider */}
+              <FadeInUp delay="200ms" className="w-full max-w-4xl mx-auto mb-16 mt-6">
+                <div className="relative w-full aspect-video rounded-[16px] overflow-hidden shadow-xl border border-[#e5e5e8] bg-[#1a1a1a] group">
+                  {heroBullets.map((bullet, idx) => (
+                    <div 
+                      key={idx} 
+                      className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${currentHeroSlide === idx ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+                    >
+                      <img src={bullet.img} className="w-full h-full object-cover opacity-60" alt="OSG Insight" />
+                      <div className="absolute inset-0 bg-[#1a1a1a]/40 flex items-center justify-center px-8 sm:px-16">
+                        <p className="text-white text-[24px] md:text-[32px] lg:text-[38px] font-poppins font-bold text-center max-w-3xl leading-snug shadow-sm drop-shadow-md">
+                          {bullet.text}
+                        </p>
                       </div>
-                      <div className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">{item.step}</div>
-                      <h3 className="text-lg font-bold mb-2 text-slate-900">{item.title}</h3>
-                      <p className="text-slate-600 text-sm leading-relaxed">{item.desc}</p>
                     </div>
                   ))}
+                  
+                  {/* Slider Pagination Dots */}
+                  <div className="absolute bottom-6 left-0 w-full flex justify-center gap-4 z-20">
+                    {heroBullets.map((_, idx) => (
+                      <button 
+                        key={idx} 
+                        onClick={() => setCurrentHeroSlide(idx)} 
+                        className={`w-3.5 h-3.5 rounded-full transition-all duration-300 ${currentHeroSlide === idx ? 'bg-[#058ae5] scale-125' : 'bg-white/50 hover:bg-white'}`}
+                        aria-label={`Go to slide ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
+              </FadeInUp>
+
+              {/* Trust Strip */}
+              <FadeInUp delay="400ms" className="w-full border-t border-[#e5e5e8] pt-8 flex flex-wrap justify-center gap-4 md:gap-8 text-[16px] md:text-[18px] font-semibold text-[#1a1a1a]/70 uppercase tracking-widest">
+                <span>Pharma</span>
+                <span className="hidden md:inline text-transparent bg-clip-text bg-gradient-to-r from-[#058ae5] to-[#02ce6b] font-black">•</span>
+                <span>MedTech</span>
+                <span className="hidden md:inline text-transparent bg-clip-text bg-gradient-to-r from-[#058ae5] to-[#02ce6b] font-black">•</span>
+                <span>Healthcare</span>
+                <span className="hidden lg:inline text-transparent bg-clip-text bg-gradient-to-r from-[#058ae5] to-[#02ce6b] font-black">•</span>
+                <span>Secure Data Workflows</span>
+                <span className="hidden lg:inline text-transparent bg-clip-text bg-gradient-to-r from-[#058ae5] to-[#02ce6b] font-black">•</span>
+                <span>Analytics + Strategy</span>
+              </FadeInUp>
+
             </div>
           </div>
         </section>
 
-        {/* 6. AI / DIFFERENTIATOR SECTION (NEW) */}
-        <section className="py-20 md:py-28 bg-slate-50 border-y border-slate-200">
+        {/* SECTION 2: WHO WE HELP */}
+        <section id="industries" className="py-20 md:py-28 bg-[#f8f9fa] border-b border-[#e5e5e8]">
           <div className="px-5 md:px-10 lg:px-20 w-full">
-            <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-              {/* Visual Side */}
-              <div className="order-2 lg:order-1 w-full aspect-square md:aspect-video lg:aspect-square bg-white border border-slate-200 flex flex-col items-center justify-center p-8 relative overflow-hidden">
-                 <div className="absolute w-[150%] h-[150%] animate-[spin_60s_linear_infinite] opacity-5">
-                    <div className="w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMTkiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzAwMCIgc3Ryb2tlLXdpZHRoPSIxIiBzdHJva2UtZGFzaGFycmF5PSIyIDQiLz48L3N2Zz4=')]"></div>
-                 </div>
-                 <BrainCircuit className="w-20 h-20 text-slate-900 mb-6 relative z-10" />
-                 <div className="text-center relative z-10">
-                    <h4 className="font-bold text-slate-900 text-xl mb-2">Agentic AI Models</h4>
-                    <p className="text-sm text-slate-500">Visual Graphic Placeholder</p>
-                 </div>
+            <div className="max-w-[1200px] mx-auto flex flex-col items-center">
+              
+              <FadeInUp className="flex flex-col md:flex-row justify-between items-start md:items-end w-full mb-16 gap-6">
+                <div className="max-w-2xl text-left">
+                  <h2 className="text-3xl md:text-4xl lg:text-[42px] font-poppins font-bold tracking-tight mb-4 text-[#1a1a1a]">
+                    Built for Complex, <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#058ae5] to-[#02ce6b]">Data-Rich Industries</span>
+                  </h2>
+                  <p className="text-[18px] md:text-[20px] text-[#1a1a1a]/70 font-barlow leading-relaxed">
+                    OSG works where commercial decisions are high-stakes, data is fragmented, and leadership teams need clear strategic direction.
+                  </p>
+                </div>
+                <GradientButton href="#industries" className="shrink-0">
+                  Explore Industries <ArrowRight className="w-5 h-5"/>
+                </GradientButton>
+              </FadeInUp>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
+                {[
+                  { 
+                    title: 'Pharma', 
+                    icon: <Microscope className="w-8 h-8 text-white"/>, 
+                    desc: 'Use analytics to clarify treatment landscapes, focus brand strategies, and align commercial teams around the right customers and accounts.',
+                    img: 'https://images.unsplash.com/photo-1579154204601-01588f351e67?auto=format&fit=crop&w=800&q=80'
+                  },
+                  { 
+                    title: 'MedTech', 
+                    icon: <Activity className="w-8 h-8 text-white"/>, 
+                    desc: 'Understand adoption drivers, prioritize HCP and account targets, and sharpen launch and growth plans for complex device portfolios.',
+                    img: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=800&q=80'
+                  },
+                  { 
+                    title: 'Healthcare', 
+                    icon: <Stethoscope className="w-8 h-8 text-white"/>, 
+                    desc: 'Combine patient, provider, and market data to improve service mix, experience, and growth decisions across your organization.',
+                    img: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=800&q=80'
+                  }
+                ].map((item, i) => (
+                  <FadeInUp key={i} delay={`${i * 100}ms`}>
+                    <div className="group relative bg-white rounded-[16px] overflow-hidden border border-[#e5e5e8] shadow-sm hover:shadow-xl transition-all duration-300 ease-out h-full flex flex-col hover:-translate-y-1">
+                      <div className="h-[200px] w-full relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-br from-[#058ae5]/80 to-[#02ce6b]/80 mix-blend-multiply z-10 transition-opacity duration-300 group-hover:opacity-90" />
+                        <img src={item.img} alt={item.title} className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700 ease-out" />
+                        <div className="absolute top-6 left-6 z-20">
+                          {item.icon}
+                        </div>
+                      </div>
+                      <div className="p-8 flex-1 flex flex-col bg-white z-20">
+                        <h3 className="text-[24px] md:text-[26px] font-poppins font-bold mb-4 text-[#1a1a1a]">{item.title}</h3>
+                        <p className="text-[16px] md:text-[18px] text-[#1a1a1a]/70 leading-relaxed font-barlow">{item.desc}</p>
+                      </div>
+                    </div>
+                  </FadeInUp>
+                ))}
               </div>
 
-              {/* Content Side */}
-              <div className="order-1 lg:order-2 flex flex-col">
-                <div className="inline-block px-3 py-1 bg-slate-200 text-slate-700 text-xs font-bold uppercase tracking-widest w-fit mb-6">
-                  Intelligence
-                </div>
-                <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6 text-slate-900">
-                  AI-Powered Decisions
+            </div>
+          </div>
+        </section>
+
+        {/* SECTION 3: WHAT WE DO */}
+        <section id="services" className="py-20 md:py-28 bg-white border-b border-[#e5e5e8]">
+          <div className="px-5 md:px-10 lg:px-20 w-full">
+            <div className="max-w-[1200px] mx-auto flex flex-col items-center">
+              
+              <FadeInUp className="mb-16 text-center max-w-3xl mx-auto">
+                <h2 className="text-3xl md:text-4xl lg:text-[42px] font-poppins font-bold tracking-tight mb-6 text-[#1a1a1a]">
+                  Analytics and Strategy Services That Support Real Decisions
                 </h2>
-                <p className="text-lg md:text-xl text-slate-600 mb-8 leading-relaxed">
-                  Introducing our generative AI and predictive modeling capabilities that let you interact with complex commercial data like never before. Safely scale AI while keeping strategic decisions explainable and defensible.
+                <p className="text-[18px] md:text-[20px] text-[#1a1a1a]/70 font-barlow mb-8 leading-relaxed">
+                  OSG connects rigorous analytics with practical strategy so leadership teams can act with confidence.
                 </p>
-                <ul className="flex flex-col gap-4 mb-8">
-                  <li className="flex items-start gap-3 border-b border-slate-200 pb-4"><ArrowRight className="w-5 h-5 text-slate-900 shrink-0"/> <span className="font-medium text-slate-700">Predict market adoption curves with higher accuracy.</span></li>
-                  <li className="flex items-start gap-3 border-b border-slate-200 pb-4"><ArrowRight className="w-5 h-5 text-slate-900 shrink-0"/> <span className="font-medium text-slate-700">Synthesize vast amounts of unstructured healthcare data.</span></li>
-                  <li className="flex items-start gap-3"><ArrowRight className="w-5 h-5 text-slate-900 shrink-0"/> <span className="font-medium text-slate-700">Empower leadership teams with real-time scenario planning.</span></li>
-                </ul>
-                <button className="bg-slate-900 text-white px-6 py-3 font-bold uppercase tracking-wider text-sm w-fit hover:bg-slate-800 transition-colors">
-                  Explore AI Capabilities
-                </button>
+              </FadeInUp>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-0 border-t border-l border-[#e5e5e8] w-full">
+                {[
+                  { title: 'Customer Analytics', icon: <BarChart3 className="w-8 h-8"/>, desc: 'Identify what truly drives customer behavior, value, loyalty, and choice across segments and channels.' },
+                  { title: 'Segmentation & Targeting', icon: <Target className="w-8 h-8"/>, desc: 'Prioritize the customers, accounts, or audiences that matter most for growth, launch, and retention.' },
+                  { title: 'Launch & Growth Strategy', icon: <Rocket className="w-8 h-8"/>, desc: 'Support go-to-market, launch, and expansion decisions with evidence-based analytics and scenario planning.' },
+                  { title: 'Journey & Experience Analytics', icon: <MapIcon className="w-8 h-8"/>, desc: 'Find the points of friction that matter most and focus resources on the changes that move outcomes.' },
+                  { title: 'Dashboarding & Decision Support', icon: <Activity className="w-8 h-8"/>, desc: 'Give leaders clear, tailored views of the metrics, patterns, and trade-offs behind critical decisions.' },
+                  { title: 'Predictive & AI-Enabled Analytics', icon: <BrainCircuit className="w-8 h-8"/>, desc: 'Use models to forecast behavior, size opportunities, and sharpen strategic planning and resource allocation.' }
+                ].map((item, i) => (
+                  <FadeInUp key={i} delay={`${i * 50}ms`}>
+                    <div className="p-10 border-b border-r border-[#e5e5e8] hover:bg-[#f8f9fa] transition-colors duration-300 h-full flex flex-col items-start group">
+                      
+                      {/* CSS-Optimized Gradient Overlay Icon Container */}
+                      <div className="w-16 h-16 bg-white border border-[#e5e5e8] rounded-lg flex items-center justify-center mb-6 relative overflow-hidden shadow-sm transition-all duration-300 group-hover:border-transparent group-hover:shadow-md">
+                        <div className="absolute inset-0 bg-gradient-to-br from-[#058ae5] to-[#02ce6b] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        <div className="relative z-10 flex items-center justify-center w-full h-full">
+                          {React.cloneElement(item.icon, { className: "w-8 h-8 text-[#058ae5] group-hover:text-white transition-colors duration-300" })}
+                        </div>
+                      </div>
+
+                      <h3 className="text-[22px] md:text-[24px] font-poppins font-bold mb-4 text-[#1a1a1a] group-hover:text-[#058ae5] transition-colors duration-300">{item.title}</h3>
+                      <p className="text-[16px] md:text-[18px] text-[#1a1a1a]/70 font-barlow leading-relaxed">{item.desc}</p>
+                    </div>
+                  </FadeInUp>
+                ))}
               </div>
+
+              <FadeInUp delay="200ms" className="mt-14 text-center">
+                <GradientButton href="#services">
+                  View Full Capabilities
+                </GradientButton>
+              </FadeInUp>
+
             </div>
           </div>
         </section>
 
-        {/* 7. SELECTED OUTCOMES (With Metrics) */}
-        <section id="outcomes" className="py-20 md:py-28 bg-white">
+        {/* SECTION 4: WHY OSG */}
+        <section className="py-20 md:py-28 bg-[#f8f9fa] border-b border-[#e5e5e8]">
           <div className="px-5 md:px-10 lg:px-20 w-full">
-            <div className="max-w-7xl mx-auto">
-              <div className="mb-16 flex flex-col md:flex-row md:justify-between md:items-end gap-6">
-                <div className="max-w-2xl">
-                  <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 text-slate-900">Selected Outcomes</h2>
-                  <p className="text-xl text-slate-600">A few examples of how analytics and strategy create measurable impact.</p>
-                </div>
-                <button className="text-slate-900 hover:text-slate-600 font-bold uppercase tracking-wider text-sm flex items-center gap-2 border-b-2 border-slate-900 pb-1">
-                  View Case Studies <ArrowRight className="w-4 h-4"/>
-                </button>
+            <div className="max-w-[1200px] mx-auto">
+              
+              <FadeInUp className="mb-16 max-w-2xl">
+                <h2 className="text-3xl md:text-4xl lg:text-[42px] font-poppins font-bold tracking-tight mb-6 text-[#1a1a1a]">
+                  Why Leadership Teams Choose OSG
+                </h2>
+                <p className="text-[18px] md:text-[20px] text-[#1a1a1a]/70 font-barlow leading-relaxed">
+                  OSG is built for organizations that need more than reports or dashboards — they need analytics that change decisions.
+                </p>
+              </FadeInUp>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                <FadeInUp className="md:col-span-2 bg-white rounded-[16px] p-10 border border-[#e5e5e8] shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow duration-300">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[#340a54] to-[#058ae5]" />
+                  <div className="relative z-10">
+                    <h3 className="text-[24px] md:text-[28px] font-poppins font-bold mb-4 text-[#340a54] group-hover:text-[#058ae5] transition-colors duration-300">Decision-Focused Analytics</h3>
+                    <p className="text-[18px] md:text-[20px] text-[#1a1a1a]/70 font-barlow leading-relaxed max-w-2xl">
+                      Every engagement starts with the decisions you need to make, then works backwards to the analytics required to support them.
+                    </p>
+                  </div>
+                  <div className="absolute right-0 bottom-0 opacity-5 w-64 h-64 transform translate-x-1/4 translate-y-1/4 group-hover:scale-110 transition-transform duration-700 ease-out pointer-events-none">
+                    <Target className="w-full h-full text-[#340a54]" />
+                  </div>
+                </FadeInUp>
+
+                <FadeInUp delay="100ms" className="col-span-1 bg-white rounded-[16px] p-8 border border-[#e5e5e8] shadow-sm hover:shadow-md transition-shadow duration-300 relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#058ae5] to-[#02ce6b]" />
+                  <div className="relative z-10">
+                    <h3 className="text-[22px] md:text-[24px] font-poppins font-bold mb-4 text-[#1a1a1a] group-hover:text-[#058ae5] transition-colors duration-300">Industry Depth</h3>
+                    <p className="text-[16px] md:text-[18px] text-[#1a1a1a]/70 font-barlow leading-relaxed">OSG works in industries where stakeholder dynamics, regulation, and data complexity make decisions harder, not simpler.</p>
+                  </div>
+                  <div className="absolute right-0 bottom-0 opacity-5 w-48 h-48 transform translate-x-1/4 translate-y-1/4 group-hover:scale-110 transition-transform duration-700 ease-out pointer-events-none">
+                    <Activity className="w-full h-full text-[#1a1a1a]" />
+                  </div>
+                </FadeInUp>
+
+                <FadeInUp delay="200ms" className="col-span-1 bg-white rounded-[16px] p-8 border border-[#e5e5e8] shadow-sm hover:shadow-md transition-shadow duration-300 relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#058ae5] to-[#02ce6b]" />
+                  <div className="relative z-10">
+                    <h3 className="text-[22px] md:text-[24px] font-poppins font-bold mb-4 text-[#1a1a1a] group-hover:text-[#058ae5] transition-colors duration-300">Proprietary Methods + Practical Delivery</h3>
+                    <p className="text-[16px] md:text-[18px] text-[#1a1a1a]/70 font-barlow leading-relaxed">OSG’s proprietary approaches and platforms are translated into clear recommendations, not left as technical detail.</p>
+                  </div>
+                  <div className="absolute right-0 bottom-0 opacity-5 w-48 h-48 transform translate-x-1/4 translate-y-1/4 group-hover:scale-110 transition-transform duration-700 ease-out pointer-events-none">
+                    <Lightbulb className="w-full h-full text-[#1a1a1a]" />
+                  </div>
+                </FadeInUp>
+
+                <FadeInUp delay="300ms" className="md:col-span-2 bg-white rounded-[16px] p-10 border border-[#e5e5e8] shadow-sm hover:shadow-md transition-shadow duration-300 relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#058ae5] to-[#02ce6b]" />
+                  <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
+                    <div>
+                      <h3 className="text-[24px] md:text-[28px] font-poppins font-bold mb-4 text-[#1a1a1a] group-hover:text-[#058ae5] transition-colors duration-300">Secure, Enterprise-Ready Approach</h3>
+                      <p className="text-[18px] md:text-[20px] text-[#1a1a1a]/70 font-barlow leading-relaxed max-w-2xl">
+                        Our workflows are designed for sensitive commercial, clinical, and patient-related data, with security and compliance as a core expectation.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="absolute right-0 bottom-0 opacity-5 w-64 h-64 transform translate-x-1/4 translate-y-1/4 group-hover:scale-110 transition-transform duration-700 ease-out pointer-events-none">
+                    <ShieldCheck className="w-full h-full text-[#1a1a1a]" />
+                  </div>
+                </FadeInUp>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <FadeInUp delay="400ms" className="flex flex-wrap items-center gap-4 text-[16px] md:text-[18px] font-semibold uppercase tracking-widest text-[#1a1a1a]/70">
+                 <span className="text-[#058ae5]">✓</span> GDPR-aware 
+                 <span className="hidden md:inline text-[#e5e5e8]">|</span> 
+                 <span className="text-[#058ae5]">✓</span> HIPAA-aware 
+                 <span className="hidden md:inline text-[#e5e5e8]">|</span> 
+                 <span className="text-[#058ae5]">✓</span> Strategy + Analytics 
+                 <span className="hidden md:inline text-[#e5e5e8]">|</span> 
+                 <span className="text-[#058ae5]">✓</span> Leadership-ready Outputs
+              </FadeInUp>
+
+            </div>
+          </div>
+        </section>
+
+        {/* SECTION 5: SELECTED OUTCOMES (Case Studies) */}
+        <section id="outcomes" className="py-20 md:py-28 bg-white border-b border-[#e5e5e8]">
+          <div className="px-5 md:px-10 lg:px-20 w-full">
+            <div className="max-w-[1200px] mx-auto">
+              
+              <FadeInUp className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-6">
+                <div className="max-w-2xl text-left">
+                  <h2 className="text-3xl md:text-4xl lg:text-[42px] font-poppins font-bold tracking-tight mb-6 text-[#1a1a1a]">
+                    Case Studies
+                  </h2>
+                  <p className="text-[18px] md:text-[20px] text-[#1a1a1a]/70 font-barlow leading-relaxed">
+                    A few examples of how analytics and strategy work together in practice.
+                  </p>
+                </div>
+                <GradientButton href="#outcomes" className="shrink-0">
+                  View More <ArrowRight className="w-5 h-5"/>
+                </GradientButton>
+              </FadeInUp>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
                 {[
                   { 
                     client: 'Global MedTech Company', 
-                    metric: '+25%',
-                    metricLabel: 'Impact on Sales Efficiency',
-                    problem: 'Complex device portfolio needed clearer customer segmentation.',
-                    solution: 'Built a behavioral analytics framework to focus commercial efforts.',
-                    impact: 'Sales aligned around fewer, higher-value segments.'
+                    icon: <Activity className="w-8 h-8 text-[#1a1a1a]"/>,
+                    challenge: 'A complex device portfolio needed clearer customer segmentation and adoption drivers.',
+                    osg: 'Built a behavioral segmentation and analytics framework to focus commercial efforts.',
+                    outcome: 'Sales and marketing aligned around fewer, higher-value segments and clearer adoption levers.',
+                    img: 'https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&w=800&q=80'
                   },
                   { 
-                    client: 'Top 5 Pharma Brand', 
-                    metric: '8%',
-                    metricLabel: 'Jump in Brand Revenue',
-                    problem: 'Launch planning lacked clear understanding of channel response.',
-                    solution: 'Combined survey and behavioral data to quantify decision drivers.',
-                    impact: 'Clearer targeting strategy significantly increased launch effectiveness.'
+                    client: 'Pharma Brand Team', 
+                    icon: <Microscope className="w-8 h-8 text-[#1a1a1a]"/>,
+                    challenge: 'Launch planning required sharper understanding of customer response to messages and channels.',
+                    osg: 'Combined survey, secondary, and behavioral data to quantify decision drivers.',
+                    outcome: 'Clearer targeting and messaging strategy to support launch execution.',
+                    img: 'https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?auto=format&fit=crop&w=800&q=80'
                   },
                   { 
-                    client: 'Healthcare Services Org', 
-                    metric: '15 pt',
-                    metricLabel: 'Increase in Patient Experience Score',
-                    problem: 'Leadership needed to know where friction impacted growth.',
-                    solution: 'Mapped end-to-end journey to find high-impact friction points.',
-                    impact: 'Prioritized roadmap of experience improvements executed.'
+                    client: 'Healthcare Services Organization', 
+                    icon: <Stethoscope className="w-8 h-8 text-[#1a1a1a]"/>,
+                    challenge: 'Leadership needed to understand where experience issues were impacting growth.',
+                    osg: 'Mapped the end-to-end journey and identified high-impact friction points.',
+                    outcome: 'A prioritized roadmap of experience improvements linked to strategic goals.',
+                    img: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=800&q=80'
                   }
                 ].map((item, i) => (
-                  <div key={i} className="bg-slate-50 border border-slate-200 p-8 flex flex-col h-full">
-                    <div className="text-xs uppercase tracking-widest text-slate-500 font-bold mb-6">{item.client}</div>
-                    
-                    {/* Explicit Impact Metrics */}
-                    <div className="mb-8 bg-white border border-slate-200 p-6 shadow-sm">
-                      <div className="text-5xl font-light text-slate-900 mb-2 tracking-tighter">{item.metric}</div>
-                      <div className="text-sm font-bold text-slate-600 uppercase tracking-wide leading-snug">{item.metricLabel}</div>
-                    </div>
-
-                    <div className="flex flex-col gap-4 flex-1">
-                      <div><span className="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-1">Problem</span><p className="text-sm text-slate-800 font-medium">{item.problem}</p></div>
-                      <div><span className="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-1">Solution</span><p className="text-sm text-slate-600">{item.solution}</p></div>
-                      <div className="mt-auto pt-4 border-t border-slate-200"><span className="text-xs font-bold text-slate-900 uppercase tracking-widest block mb-1">Impact</span><p className="text-sm text-slate-900 font-bold">{item.impact}</p></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* 8. WHY OSG (Pillars & Proof) */}
-        <section className="py-20 md:py-28 bg-slate-900 text-white">
-          <div className="px-5 md:px-10 lg:px-20 w-full">
-            <div className="max-w-7xl mx-auto">
-              <div className="mb-16">
-                <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">Why Choose OSG</h2>
-                <p className="text-xl text-slate-400 max-w-2xl">Organizations that need analytics to change decisions, not just provide reports.</p>
-              </div>
-
-              {/* 2x2 Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-12 mb-16">
-                {[
-                  { title: 'Decision-Focused', desc: 'Every engagement starts with the decisions you need to make, working backwards to the analytics required to support them.' },
-                  { title: 'Industry Depth', desc: 'We work where stakeholder dynamics, regulation, and data complexity make decisions harder, not simpler.' },
-                  { title: 'Proprietary Methods', desc: 'Our unique approaches and platforms are translated into clear recommendations, not left as technical detail.' },
-                  { title: 'Enterprise-Ready', desc: 'Workflows designed for sensitive commercial, clinical, and patient data, with security as a core expectation.' }
-                ].map((item, i) => (
-                  <div key={i} className="flex gap-4 items-start">
-                    <CheckCircle2 className="w-8 h-8 text-slate-400 shrink-0"/>
-                    <div>
-                      <h3 className="text-2xl font-bold mb-3">{item.title}</h3>
-                      <p className="text-slate-400 leading-relaxed">{item.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Micro-proof Row */}
-              <div className="border-t border-slate-700 pt-8 flex flex-wrap items-center gap-x-8 gap-y-4 text-sm font-bold uppercase tracking-widest text-slate-400">
-                 <ShieldCheck className="w-6 h-6 text-slate-300"/>
-                 <span>GDPR-Compliant Workflows</span>
-                 <span className="hidden md:inline">•</span>
-                 <span>HIPAA-Aware Standards</span>
-                 <span className="hidden md:inline">•</span>
-                 <span>Secure Infrastructure</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* 9. INSIGHTS (Tabs + Details) */}
-        <section id="insights" className="py-20 md:py-28 bg-white border-b border-slate-200">
-          <div className="px-5 md:px-10 lg:px-20 w-full">
-            <div className="max-w-7xl mx-auto">
-              <div className="mb-12">
-                <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 text-slate-900">Latest Insights</h2>
-              </div>
-
-              {/* Filter Tabs */}
-              <div className="flex flex-wrap gap-2 mb-10 border-b border-slate-200 pb-4">
-                {['All', 'Reports', 'Blog', 'AI & Data', 'Customer Strategy'].map(filter => (
-                  <button 
-                    key={filter}
-                    onClick={() => setActiveFilter(filter)}
-                    className={`text-sm font-bold uppercase tracking-wider px-5 py-2.5 transition-colors ${activeFilter === filter ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'}`}
-                  >
-                    {filter}
-                  </button>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {[
-                  { type: 'Report', cat: 'AI & Data', title: 'Agentic AI in Life Sciences: Designing Decision Systems', readTime: '8 min read', date: 'Mar 13, 2026' },
-                  { type: 'Blog', cat: 'Strategy', title: 'Beyond Traditional Segmentation: Using Behavioral Data', readTime: '5 min read', date: 'Mar 10, 2026' },
-                  { type: 'Blog', cat: 'Healthcare', title: 'Measuring True Customer Value in Healthcare Settings', readTime: '6 min read', date: 'Feb 28, 2026' }
-                ].map((item, i) => (
-                  <a href="#" key={i} className="group flex flex-col h-full block">
-                    <div className="h-48 bg-slate-100 w-full border border-slate-200 flex items-center justify-center mb-6 overflow-hidden relative">
-                       <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/5 transition-colors z-10"></div>
-                       <ImageIcon className="w-8 h-8 text-slate-300"/>
-                       {/* Category Tag on Image */}
-                       <div className="absolute top-4 left-4 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-slate-900 z-20 shadow-sm border border-slate-200">
-                         {item.cat}
-                       </div>
-                    </div>
-                    <div className="flex-1 flex flex-col">
-                      <div className="flex items-center gap-3 text-xs text-slate-500 font-bold uppercase tracking-widest mb-3">
-                        <span>{item.type}</span>
-                        <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                        <span className="flex items-center gap-1"><Clock className="w-3 h-3"/> {item.readTime}</span>
+                  <FadeInUp key={i} delay={`${i * 100}ms`}>
+                    <div className="bg-white rounded-[16px] border border-[#e5e5e8] shadow-sm hover:shadow-lg transition-all duration-300 ease-out flex flex-col h-full p-6 lg:p-8 group text-left">
+                      
+                      <div className="mb-6 group-hover:scale-105 transition-transform duration-300 origin-left">
+                        {item.icon}
                       </div>
-                      <h3 className="text-xl font-bold mb-4 text-slate-900 group-hover:underline decoration-2 underline-offset-4 leading-snug">{item.title}</h3>
-                      <div className="mt-auto flex items-center gap-2 text-sm font-bold text-slate-900 uppercase tracking-wider group-hover:text-slate-600 transition-colors">
-                        Read Article <ArrowUpRight className="w-4 h-4"/>
+                      
+                      <h3 className="text-[22px] md:text-[24px] font-poppins font-bold text-[#1a1a1a] mb-6 leading-tight group-hover:text-[#058ae5] transition-colors duration-300">{item.client}</h3>
+                      
+                      <div className="text-[16px] md:text-[17px] text-[#1a1a1a]/80 font-barlow space-y-5 mb-10 flex-1">
+                        <p><strong className="font-semibold text-[#1a1a1a] uppercase text-[14px] md:text-[15px] tracking-widest block mb-1">Challenge:</strong> <span className="leading-relaxed block">{item.challenge}</span></p>
+                        <p><strong className="font-semibold text-[#1a1a1a] uppercase text-[14px] md:text-[15px] tracking-widest block mb-1">OSG contribution:</strong> <span className="leading-relaxed block">{item.osg}</span></p>
+                        <p><strong className="font-semibold text-[#1a1a1a] uppercase text-[14px] md:text-[15px] tracking-widest block mb-1">Outcome:</strong> <span className="leading-relaxed block">{item.outcome}</span></p>
                       </div>
+
+                      <div className="w-full h-[200px] rounded-[12px] overflow-hidden shrink-0 mt-auto">
+                        <img src={item.img} alt={item.client} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
+                      </div>
+
                     </div>
-                  </a>
+                  </FadeInUp>
                 ))}
               </div>
             </div>
           </div>
         </section>
 
-        {/* 10. ABOUT (Short & Minimal) */}
-        <section className="py-20 md:py-28 bg-slate-50">
+        {/* SECTION 6: HOW OSG WORKS */}
+        <section id="process" className="py-20 md:py-28 bg-[#f8f9fa] relative border-b border-[#e5e5e8]">
+          <div className="px-5 md:px-10 lg:px-20 w-full h-full">
+            <div className="max-w-[1200px] mx-auto">
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start relative h-full">
+                
+                <div className="lg:sticky lg:top-32 max-w-xl self-start">
+                  <FadeInUp>
+                    <h2 className="text-3xl md:text-4xl lg:text-[42px] font-poppins font-bold tracking-tight mb-6 text-[#1a1a1a] leading-tight">
+                      A Clear Path from Data to <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#058ae5] to-[#02ce6b]">Decision</span>
+                    </h2>
+                    <p className="text-[18px] md:text-[22px] text-[#1a1a1a]/70 font-barlow leading-relaxed">
+                      OSG brings structure to complex questions so analytics lead to action, not just insight. We efficiently manage your data-insights-decision value chain to drive immediate impact.
+                    </p>
+                  </FadeInUp>
+                </div>
+                
+                <div className="relative pl-8 md:pl-12 space-y-10 py-4 ml-4 lg:ml-0">
+                  <div className="absolute left-[1px] top-10 bottom-10 w-[2px] bg-gradient-to-b from-[#058ae5] via-[#02ce6b] to-transparent"></div>
+
+                  {[
+                    { num: '1', title: 'Clarify the business question', desc: 'Align with leadership on the decisions that need to be made and the outcomes that matter.' },
+                    { num: '2', title: 'Build the analytics view', desc: 'Bring together the right data, methods, and models to answer those questions with confidence.' },
+                    { num: '3', title: 'Deliver decision-ready outputs', desc: 'Translate findings into dashboards, recommendations, and strategic support aligned to your teams.' }
+                  ].map((step, i) => (
+                    <FadeInUp key={i} delay={`${i * 150}ms`} className="relative group">
+                      {/* Gradient Border Number Node */}
+                      <div className="absolute left-[-32px] md:left-[-48px] -translate-x-1/2 top-4 w-12 h-12 md:w-14 md:h-14 p-[2px] rounded-full bg-gradient-to-br from-[#058ae5] to-[#02ce6b] shadow-sm z-10 group-hover:scale-110 transition-transform duration-300 ease-out">
+                        <div className="w-full h-full bg-white rounded-full flex items-center justify-center font-poppins font-bold text-[20px] md:text-[24px] text-[#340a54] transition-colors duration-300 group-hover:text-[#058ae5]">
+                          {step.num}
+                        </div>
+                      </div>
+                      
+                      <div className="bg-white border border-[#e5e5e8] rounded-xl p-8 md:p-10 hover:shadow-md transition-shadow duration-300 ml-2 md:ml-4">
+                        <h3 className="text-[20px] md:text-[24px] font-poppins font-bold mb-4 text-[#1a1a1a] group-hover:text-[#058ae5] transition-colors duration-300">{step.title}</h3>
+                        <p className="text-[16px] md:text-[18px] text-[#1a1a1a]/70 font-barlow leading-relaxed">{step.desc}</p>
+                      </div>
+                    </FadeInUp>
+                  ))}
+                </div>
+                
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        {/* SECTION 7: INSIGHTS */}
+        <section id="insights" className="py-20 md:py-28 bg-white border-y border-[#e5e5e8]">
           <div className="px-5 md:px-10 lg:px-20 w-full">
-            <div className="max-w-4xl mx-auto text-center flex flex-col items-center">
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-6 text-slate-900">About OSG</h2>
-              <p className="text-lg text-slate-600 leading-relaxed mb-10 max-w-2xl">
-                OSG is a Data Analytics & Strategy partner focused on helping leadership teams in pharma, medtech, and healthcare make complex commercial choices that cannot be made on instinct alone.
+            <div className="max-w-[1200px] mx-auto">
+              
+              <FadeInUp className="mb-12 flex flex-col items-start w-full">
+                <h2 className="text-3xl md:text-4xl lg:text-[42px] font-poppins font-bold tracking-tight mb-6 text-[#1a1a1a]">
+                  Insights for Analytics and Strategy Leaders
+                </h2>
+                <p className="text-[18px] md:text-[20px] text-[#1a1a1a]/70 font-barlow mb-12 max-w-2xl leading-relaxed">
+                  Perspectives from OSG on where analytics and strategy create the most value.
+                </p>
+                
+                <div className="flex flex-col md:flex-row justify-between items-center gap-6 w-full border-b border-[#e5e5e8] pb-6">
+                  <div className="flex flex-wrap justify-start gap-3 w-full md:w-auto">
+                    {['All Insights', 'AI & Data', 'Customer Strategy', 'Healthcare'].map(tab => (
+                      <button 
+                        key={tab}
+                        onClick={() => setActiveFilter(tab)}
+                        className={`px-6 py-2.5 rounded-[4px] text-[16px] md:text-[17px] font-semibold transition-all duration-300 ease-out ${activeFilter === tab ? 'bg-gradient-to-r from-[#340a54] to-[#058ae5] text-white shadow-md border-transparent' : 'bg-white text-[#1a1a1a]/70 border border-[#e5e5e8] hover:border-[#058ae5] hover:text-[#058ae5]'}`}
+                      >
+                        {tab}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="relative w-full md:w-auto">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#1a1a1a]/40" />
+                    <input 
+                      type="text" 
+                      placeholder="Search Posts" 
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full md:w-[320px] pl-12 pr-4 py-3 rounded-[4px] border border-[#e5e5e8] text-[16px] md:text-[17px] font-medium text-[#1a1a1a] placeholder-[#1a1a1a]/50 focus:outline-none focus:border-[#058ae5] focus:ring-1 focus:ring-[#058ae5] transition-all bg-white"
+                    />
+                  </div>
+                </div>
+              </FadeInUp>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+                {[
+                  { title: 'AI Governance in Commercial Analytics', desc: 'How leadership teams can safely scale AI while keeping decisions explainable and defensible.', img: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=800&q=80', tag: 'AI & Data' },
+                  { title: 'Beyond Traditional Segmentation', desc: 'Why behavioral and attitudinal data often reveal more than demographics alone.', img: 'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=800&q=80', tag: 'Customer Strategy' },
+                  { title: 'Measuring Customer Value in Healthcare', desc: 'Linking patient, provider, and commercial data to understand where value is really created.', img: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=800&q=80', tag: 'Healthcare' }
+                ].map((article, i) => (
+                  <FadeInUp key={i} delay={`${i * 100}ms`}>
+                    <div className="bg-white rounded-[16px] overflow-hidden border border-[#e5e5e8] shadow-sm hover:shadow-lg transition-all duration-300 ease-out h-full flex flex-col group cursor-pointer">
+                      <div className="h-[240px] w-full overflow-hidden relative">
+                        {/* Branded Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-tr from-[#340a54]/40 to-[#058ae5]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10 mix-blend-multiply" />
+                        <img src={article.img} alt={article.title} className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700 ease-out" />
+                      </div>
+                      <div className="p-8 flex-1 flex flex-col">
+                        <span className="text-[14px] md:text-[15px] font-bold text-[#058ae5] uppercase tracking-widest mb-4 block">{article.tag}</span>
+                        <h3 className="text-[22px] md:text-[26px] font-poppins font-bold mb-4 text-[#1a1a1a] group-hover:text-[#058ae5] transition-colors duration-300 leading-snug">{article.title}</h3>
+                        <p className="text-[16px] md:text-[18px] text-[#1a1a1a]/70 font-barlow flex-1 mb-8 leading-relaxed">{article.desc}</p>
+                        <div className="text-[16px] md:text-[18px] font-bold text-[#340a54] flex items-center gap-2 uppercase tracking-wider group-hover:text-[#058ae5] transition-colors duration-300">
+                          Read Article <ArrowRight className="w-5 h-5 group-hover:translate-x-1.5 transition-transform duration-300 ease-out"/>
+                        </div>
+                      </div>
+                    </div>
+                  </FadeInUp>
+                ))}
+              </div>
+
+              <div className="text-center">
+                <GradientButton href="#insights">
+                  View All Insights
+                </GradientButton>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        {/* SECTION 8: ABOUT */}
+        <section id="about" className="py-20 md:py-28 bg-[#f8f9fa]">
+          <div className="px-5 md:px-10 lg:px-20 w-full">
+            <FadeInUp className="max-w-4xl mx-auto text-center flex flex-col items-center">
+              <h2 className="text-3xl md:text-4xl lg:text-[42px] font-poppins font-bold tracking-tight mb-8 text-[#1a1a1a]">
+                About <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#340a54] to-[#058ae5]">OSG</span>
+              </h2>
+              <p className="text-[18px] md:text-[22px] text-[#1a1a1a]/80 font-barlow leading-relaxed mb-12">
+                OSG is a Data Analytics & Strategy partner focused on helping leadership teams in pharma, medtech, and healthcare make better commercial and customer decisions. The firm brings together analytics, research, and strategic thinking to support the kind of complex choices that cannot be made on instinct alone.
               </p>
               
-              <ul className="flex flex-wrap justify-center gap-x-12 gap-y-4 text-sm font-bold text-slate-900 uppercase tracking-widest mb-12">
-                <li>Global Experience</li>
-                <li>Multidisciplinary Teams</li>
-                <li>Tailored Models</li>
+              <ul className="flex flex-col md:flex-row flex-wrap justify-center gap-x-12 gap-y-6 text-[18px] md:text-[20px] font-medium text-[#1a1a1a] text-left md:text-center">
+                <li className="flex items-center justify-center gap-3"><CheckCircle2 className="w-6 h-6 text-[#02ce6b]"/> Experience across global and regional organizations</li>
+                <li className="flex items-center justify-center gap-3"><CheckCircle2 className="w-6 h-6 text-[#058ae5]"/> Multidisciplinary teams spanning analytics, research, and strategy</li>
+                <li className="flex items-center justify-center gap-3"><CheckCircle2 className="w-6 h-6 text-[#340a54]"/> Engagement models tailored to specific decisions and timelines</li>
               </ul>
-              
-              <button className="border-2 border-slate-900 bg-transparent text-slate-900 px-8 py-4 font-bold uppercase tracking-wider text-sm hover:bg-slate-900 hover:text-white transition-colors">
-                Learn About Our Firm
-              </button>
-            </div>
+            </FadeInUp>
           </div>
         </section>
 
       </main>
 
-      {/* 11. FINAL CTA BAND */}
-      <footer className="bg-slate-900 text-white py-16 border-t-4 border-slate-700">
-        <div className="px-5 md:px-10 lg:px-20 w-full">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-            <div className="text-2xl md:text-3xl font-bold tracking-tight max-w-xl text-center md:text-left">
-              Need an analytics and strategy partner for a high-stakes commercial decision?
-            </div>
-            <div className="flex flex-col sm:flex-row items-center gap-4 shrink-0">
-              <button className="text-sm font-bold uppercase tracking-wider text-slate-300 hover:text-white transition-colors px-4 py-3">
-                Request Overview
-              </button>
-              <button className="bg-white text-slate-900 px-8 py-4 text-sm font-bold uppercase tracking-wider hover:bg-slate-200 transition-colors">
-                Talk to Our Team
-              </button>
-            </div>
+      {/* SECTION 9: FINAL CTA BAND */}
+      <footer id="contact" className="bg-[#340a54] text-white py-24 relative overflow-hidden">
+        {/* Double Brand Glow Effect */}
+        <div className="absolute top-[-10%] right-[-10%] w-full max-w-[800px] h-[800px] bg-gradient-to-bl from-[#058ae5]/30 to-transparent rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-[-10%] left-[-5%] w-full max-w-[600px] h-[600px] bg-gradient-to-tr from-[#02ce6b]/20 to-transparent rounded-full blur-[100px] pointer-events-none" />
+        
+        <div className="px-5 md:px-10 lg:px-20 w-full relative z-10">
+          <div className="max-w-[1200px] mx-auto flex flex-col items-center text-center">
+            
+            <FadeInUp>
+              <h2 className="text-3xl md:text-4xl lg:text-[48px] font-poppins font-bold tracking-tight max-w-3xl leading-tight mb-12">
+                Need an analytics and strategy partner for a high-stakes commercial decision?
+              </h2>
+              
+              <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
+                <GradientButton href="#contact" darkBg={true}>
+                  Request a Capabilities Overview
+                </GradientButton>
+              </div>
+            </FadeInUp>
+
           </div>
         </div>
       </footer>
